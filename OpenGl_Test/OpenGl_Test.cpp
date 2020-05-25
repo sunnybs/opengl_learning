@@ -24,17 +24,15 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 void Do_Movement();
 
-void initializeTexture(GLuint &texture, const char *filename);
-
-void initializeVAOandVBO(GLuint &VAO, GLuint &VBO, std::vector<float> verticesData);
-
 void ListenEvents();
 
 void SetView(int width, int height, Shader &ourShader);
 
-void getPlane(std::vector<float> &floorVerticesData);
+void getPlane(std::vector<float> &floorVerticesData, float repeatTextureCount);
 
 void getCube(std::vector<float> &verticesData);
+
+void getPrism(std::vector<float> &verticesData, float lowerBase, float upperBase);
 
 Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 bool keys[1024];
@@ -43,6 +41,9 @@ bool firstMouse = true;
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastFrame = 0.0f;
+
+// lighting
+glm::vec3 lightPos(1.2f, 10.0f, 2.0f);
 
 int main()
 {
@@ -73,7 +74,7 @@ int main()
 
 	// ОБЪЕКТЫ СЦЕНЫ
 	std::vector<float> floorVerticesData;
-	getPlane(floorVerticesData);
+	getPlane(floorVerticesData, 20);
 	Object floor;
 	floor.SetVerticles(floorVerticesData);
 	floor.SetTexture("Textures/grass.jpg");
@@ -91,10 +92,16 @@ int main()
 	tankCube.SetTexture("Textures/armor.jpg");
 
 	std::vector<float> tankWheelData;
-	getCube(tankWheelData);
+	getPrism(tankWheelData, 4, 5);
 	Object tankWheel;
 	tankWheel.SetVerticles(tankWheelData);
 	tankWheel.SetTexture("Textures/tank-wheel.jpg");
+
+	std::vector<float> tankWingData;
+	getPrism(tankWingData, 5, 3);
+	Object tankWing;
+	tankWing.SetVerticles(tankWingData);
+	tankWing.SetTexture("Textures/armor.jpg");
 
 	float r, g, b;
 	r = 117.0f / 255.0f;
@@ -122,14 +129,16 @@ int main()
 		container.SetScale(glm::vec3(1, 1, 1));
 		container.Draw(ourShader);
 
-		tankWheel.SetTranslate(glm::vec3(4.25, yLevel - 0.25, 0));
-		tankWheel.SetScale(glm::vec3(0.5, 0.5, 3.5));
+		//Гусеницы
+		tankWheel.SetTranslate(glm::vec3(3.75, yLevel - 0.25, 0));
+		tankWheel.SetScale(glm::vec3(0.5, 0.5, 4.25));
 		tankWheel.Draw(ourShader);
 
-		tankWheel.SetTranslate(glm::vec3(5.75, yLevel - 0.25, 0));
-		tankWheel.SetScale(glm::vec3(0.5, 0.5, 3.5));
+		tankWheel.SetTranslate(glm::vec3(6.25, yLevel - 0.25, 0));
+		tankWheel.SetScale(glm::vec3(0.5, 0.5, 4.25));
 		tankWheel.Draw(ourShader);
 
+		//Кузов
 		tankCube.SetTranslate(glm::vec3(5, yLevel + 0.5, 0));
 		tankCube.SetScale(glm::vec3(2, 1, 4));
 		tankCube.Draw(ourShader);
@@ -138,10 +147,29 @@ int main()
 		tankCube.SetScale(glm::vec3(2, 1, 2));
 		tankCube.Draw(ourShader);
 
+		//Крылья
+		tankCube.SetTranslate(glm::vec3(3.75, yLevel + 0.5, 0));
+		tankCube.SetScale(glm::vec3(0.5, 1, 4.5));
+		tankCube.Draw(ourShader);
+
+		tankCube.SetTranslate(glm::vec3(6.25, yLevel + 0.5, 0));
+		tankCube.SetScale(glm::vec3(0.5, 1, 4.5));
+		tankCube.Draw(ourShader);
+
+		tankWing.SetTranslate(glm::vec3(3.75, yLevel + 1.125, 0));
+		tankWing.SetScale(glm::vec3(0.5, 0.25, 4.5));
+		tankWing.Draw(ourShader);
+
+		tankWing.SetTranslate(glm::vec3(6.25, yLevel + 1.125, 0));
+		tankWing.SetScale(glm::vec3(0.5, 0.25, 4.5));
+		tankWing.Draw(ourShader);
+
+		//Крышка
 		tankCube.SetTranslate(glm::vec3(5, yLevel + 2, 0));
 		tankCube.SetScale(glm::vec3(1, 0.3, 1));
 		tankCube.Draw(ourShader);
 
+		//Дуло
 		tankCube.SetTranslate(glm::vec3(5, yLevel + 1.5, 2.5));
 		tankCube.SetScale(glm::vec3(0.1, 0.1, 3));
 		tankCube.Draw(ourShader);
@@ -157,47 +185,47 @@ int main()
 
 void getCube(std::vector<float> &verticesData) {
 	float vertices[] = {
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f, // задняя
+	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f, // передняя
+	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,  1.0f, 0.0f, // левая
+	-0.5f,  0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	-0.5f, -0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f, // правая
+	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f, // нижняя
+	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f, // верхняя
+	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
 	};
 
 	for (float vertex : vertices) {
@@ -205,15 +233,74 @@ void getCube(std::vector<float> &verticesData) {
 	}
 }
 
-void getPlane(std::vector<float> &floorVerticesData)
+void getPrism(std::vector<float> &verticesData, float lowerBaseLength, float upperBaseLength) {
+	float lowerBase = lowerBaseLength;
+	float upperBase = upperBaseLength;
+
+	float lowerTextureOffset = (1.0f - lowerBase * 0.2f) / 2.0f;
+	float upperTextureOffset = (1.0f - upperBase * 0.2f) / 2.0f;
+
+	float a = upperBase < lowerBase ? 1.0f: -1.0f;
+	float b = upperBase < lowerBase ? upperBase : lowerBase;
+
+	float vertices[] = {
+	-0.5f, -0.5f, -0.1f * lowerBase,  0.0f,  a * 0.5f, -0.1f * b,  0.5f, 0.0f, // задняя
+	 0.5f, -0.5f, -0.1f * lowerBase,  0.0f,  a * 0.5f, -0.1f * b,  1.0f, 0.0f,
+	 0.5f,  0.5f, -0.1f * upperBase,  0.0f,  a * 0.5f, -0.1f * b,  1.0f, 1.0f,
+	 0.5f,  0.5f, -0.1f * upperBase,  0.0f,  a * 0.5f, -0.1f * b,  1.0f, 1.0f,
+	-0.5f,  0.5f, -0.1f * upperBase,  0.0f,  a * 0.5f, -0.1f * b,  0.5f, 1.0f,
+	-0.5f, -0.5f, -0.1f * lowerBase,  0.0f,  a * 0.5f, -0.1f * b,  0.5f, 0.0f,
+
+	-0.5f, -0.5f,  0.1f * lowerBase,  0.0f,  a * 0.5f,  0.1f * b,  0.5f, 0.0f, // передняя
+	 0.5f, -0.5f,  0.1f * lowerBase,  0.0f,  a * 0.5f,  0.1f * b,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.1f * upperBase,  0.0f,  a * 0.5f,  0.1f * b,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.1f * upperBase,  0.0f,  a * 0.5f,  0.1f * b,  1.0f, 1.0f,
+	-0.5f,  0.5f,  0.1f * upperBase,  0.0f,  a * 0.5f,  0.1f * b,  0.5f, 1.0f,
+	-0.5f, -0.5f,  0.1f * lowerBase,  0.0f,  a * 0.5f,  0.1f * b,  0.5f, 0.0f,
+
+	-0.5f,  0.5f,  0.1f * upperBase,  -1.0f,  0.0f,  0.0f,  0.5f, upperTextureOffset, // левая
+	-0.5f,  0.5f, -0.1f * upperBase,  -1.0f,  0.0f,  0.0f,  0.5f, 1.0f - upperTextureOffset,
+	-0.5f, -0.5f, -0.1f * lowerBase,  -1.0f,  0.0f,  0.0f,  0.0f, 1.0f - lowerTextureOffset,
+	-0.5f, -0.5f, -0.1f * lowerBase,  -1.0f,  0.0f,  0.0f,  0.0f, 1.0f - lowerTextureOffset,
+	-0.5f, -0.5f,  0.1f * lowerBase,  -1.0f,  0.0f,  0.0f,  0.0f, lowerTextureOffset,
+	-0.5f,  0.5f,  0.1f * upperBase,  -1.0f,  0.0f,  0.0f,  0.5f, upperTextureOffset,
+
+	 0.5f,  0.5f,  0.1f * upperBase,  1.0f,  0.0f,  0.0f,  0.5f, upperTextureOffset, // правая
+	 0.5f,  0.5f, -0.1f * upperBase,  1.0f,  0.0f,  0.0f,  0.5f, 1.0f - upperTextureOffset,
+	 0.5f, -0.5f, -0.1f * lowerBase,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f - lowerTextureOffset,
+	 0.5f, -0.5f, -0.1f * lowerBase,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f - lowerTextureOffset,
+	 0.5f, -0.5f,  0.1f * lowerBase,  1.0f,  0.0f,  0.0f,  0.0f, lowerTextureOffset,
+	 0.5f,  0.5f,  0.1f * upperBase,  1.0f,  0.0f,  0.0f,  0.5f, upperTextureOffset,
+
+	-0.5f, -0.5f, -0.1f * lowerBase,  0.0f, -1.0f,  0.0f,  0.5f, 1.0f, // нижняя
+	 0.5f, -0.5f, -0.1f * lowerBase,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f, -0.5f,  0.1f * lowerBase,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f, -0.5f,  0.1f * lowerBase,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f, -0.5f,  0.1f * lowerBase,  0.0f, -1.0f,  0.0f,  0.5f, 0.0f,
+	-0.5f, -0.5f, -0.1f * lowerBase,  0.0f, -1.0f,  0.0f,  0.5f, 1.0f,
+
+	-0.5f,  0.5f, -0.1f * upperBase,  0.0f,  1.0f,  0.0f,  0.5f, 1.0f, // верхняя
+	 0.5f,  0.5f, -0.1f * upperBase,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+	 0.5f,  0.5f,  0.1f * upperBase,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+	 0.5f,  0.5f,  0.1f * upperBase,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+	-0.5f,  0.5f,  0.1f * upperBase,  0.0f,  1.0f,  0.0f,  0.5f, 0.0f,
+	-0.5f,  0.5f, -0.1f * upperBase,  0.0f,  1.0f,  0.0f,  0.5f, 1.0f
+	};
+
+	for (float vertex : vertices) {
+		verticesData.push_back(vertex);
+	}
+}
+
+void getPlane(std::vector<float> &floorVerticesData, float repeatTextureCount)
 {
 	float floorVertices[] = {
-		-0.5f, 0.0f, -0.5f,  0.0f, 20.0f,
-		0.5f, 0.0f, -0.5f,  20.0f, 20.0f,
-		0.5f, 0.0f,  0.5f,  20.0f, 0.0f,
-		0.5f, 0.0f,  0.5f,  20.0f, 0.0f,
-		-0.5f, 0.0f,  0.5f,  0.0f, 0.0f,
-		-0.5f, 0.0f, -0.5f,  0.0f, 20.0f,
+		-0.5f, 0.0f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f * repeatTextureCount,
+		0.5f, 0.0f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f * repeatTextureCount, 1.0f * repeatTextureCount,
+		0.5f, 0.0f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f * repeatTextureCount, 0.0f,
+		0.5f, 0.0f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f * repeatTextureCount, 0.0f,
+		-0.5f, 0.0f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+		-0.5f, 0.0f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f * repeatTextureCount,
 	};
 
 	for (float vertex : floorVertices) {
@@ -256,7 +343,6 @@ void Do_Movement()
 	if (keys[GLFW_KEY_D])
 		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
-
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {

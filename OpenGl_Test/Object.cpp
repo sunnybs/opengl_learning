@@ -6,7 +6,7 @@ Object::Object()
 }
 
 void Object::SetVerticles(std::vector<float> verticesData) {
-	verticlesCount = verticesData.size() / 5;
+	verticlesCount = verticesData.size() / 8;
 
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
@@ -15,9 +15,13 @@ void Object::SetVerticles(std::vector<float> verticesData) {
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, verticesData.size() * sizeof(float), verticesData.data(), GL_STATIC_DRAW);
 	// ”станавливаем указатели на вершинные атрибуты
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)0);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
+
+	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(2);
 }
 
@@ -53,6 +57,10 @@ void Object::SetTranslate(glm::vec3 translate) {
 }
 
 void Object::Draw(Shader &shader) {
+	GLint lightColorLoc = glGetUniformLocation(shader.Program, "lightColor");
+	GLint lightPosLoc = glGetUniformLocation(shader.Program, "lightPos");
+	glUniform3f(lightColorLoc, 1.0f, 1.0f, 1.0f);
+	glUniform3f(lightPosLoc, 10.0f, 10.0f, 10.0f);
 
 	glBindTexture(GL_TEXTURE_2D, Texture);
 	glBindVertexArray(VAO);
